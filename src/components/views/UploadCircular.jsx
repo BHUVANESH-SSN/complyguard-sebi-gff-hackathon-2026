@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { CIRCULAR } from "../data/mockData";
+import { CIRCULAR } from "../../data/mockData";
 
 const PROCESSING_STEPS = [
   "Parsing PDF text...",

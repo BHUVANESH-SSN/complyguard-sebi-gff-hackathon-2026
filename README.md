@@ -87,17 +87,24 @@ npm run lint       # run oxlint
 ## Project structure
 
 ```
+docs/
+└── plan.md                 # original build plan this prototype follows
 src/
+├── assets/
+│   └── sebi-logo.png
 ├── components/
-│   ├── Nav.jsx             # top navigation, view switching
-│   ├── Hero.jsx            # landing hero section
-│   ├── Landing.jsx         # "how it works" explainer
-│   ├── UploadCircular.jsx  # circular upload / ingestion simulation
-│   ├── ObligationList.jsx  # extracted obligations + evidence attachment
-│   ├── GapDashboard.jsx    # overdue / pending obligation overview
-│   ├── AuditTrail.jsx      # audit log viewer
-│   ├── Sidebar.jsx         # summary stats panel
-│   └── StatusBadge.jsx     # met / pending / overdue badge
+│   ├── layout/
+│   │   ├── Nav.jsx         # top navigation, view switching
+│   │   └── Sidebar.jsx     # summary stats panel
+│   ├── views/
+│   │   ├── Hero.jsx            # landing hero section
+│   │   ├── Landing.jsx         # "how it works" explainer
+│   │   ├── UploadCircular.jsx  # circular upload / ingestion simulation
+│   │   ├── ObligationList.jsx  # extracted obligations + evidence attachment
+│   │   ├── GapDashboard.jsx    # overdue / pending obligation overview
+│   │   └── AuditTrail.jsx      # audit log viewer
+│   └── shared/
+│       └── StatusBadge.jsx # met / pending / overdue badge
 ├── data/
 │   └── mockData.js         # mock circular, obligations, evidence, audit log
 ├── App.jsx                 # view routing & state

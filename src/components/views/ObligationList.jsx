@@ -1,6 +1,6 @@
 import { useState } from "react";
-import StatusBadge from "./StatusBadge";
-import { CIRCULAR } from "../data/mockData";
+import StatusBadge from "../shared/StatusBadge";
+import { CIRCULAR } from "../../data/mockData";
 
 export default function ObligationList({ obligations, evidence, onAttachEvidence }) {
   const [expandedId, setExpandedId] = useState(null);

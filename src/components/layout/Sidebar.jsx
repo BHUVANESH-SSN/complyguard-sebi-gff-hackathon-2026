@@ -1,4 +1,4 @@
-import { CIRCULAR } from "../data/mockData";
+import { CIRCULAR } from "../../data/mockData";
 
 function daysUntil(dateStr) {
   const diff = Math.ceil(

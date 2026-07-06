@@ -1,12 +1,12 @@
 import { useState } from "react";
-import Nav from "./components/Nav";
-import Hero from "./components/Hero";
-import Landing from "./components/Landing";
-import UploadCircular from "./components/UploadCircular";
-import ObligationList from "./components/ObligationList";
-import GapDashboard from "./components/GapDashboard";
-import AuditTrail from "./components/AuditTrail";
-import Sidebar from "./components/Sidebar";
+import Nav from "./components/layout/Nav";
+import Sidebar from "./components/layout/Sidebar";
+import Hero from "./components/views/Hero";
+import Landing from "./components/views/Landing";
+import UploadCircular from "./components/views/UploadCircular";
+import ObligationList from "./components/views/ObligationList";
+import GapDashboard from "./components/views/GapDashboard";
+import AuditTrail from "./components/views/AuditTrail";
 import {
   INITIAL_OBLIGATIONS,
   INITIAL_EVIDENCE,
@@ -96,7 +96,7 @@ export default function App() {
       </div>
 
       <footer className="border-t border-neutral-100 py-8 text-center text-xs text-neutral-300">
-        ComplyGuard prototype — mock data, no backend yet. Built from complyguard-prototype-plan.md.
+        ComplyGuard prototype — mock data, no backend yet. Built from docs/plan.md.
       </footer>
     </div>
   );

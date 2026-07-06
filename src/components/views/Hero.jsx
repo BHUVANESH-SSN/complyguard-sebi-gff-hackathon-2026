@@ -1,5 +1,5 @@
-import { CIRCULAR } from "../data/mockData";
-import sebiLogo from "../assets/sebi-logo.png";
+import { CIRCULAR } from "../../data/mockData";
+import sebiLogo from "../../assets/sebi-logo.png";
 
 export default function Hero({ onStart }) {
   return (

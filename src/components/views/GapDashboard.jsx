@@ -1,4 +1,4 @@
-import StatusBadge from "./StatusBadge";
+import StatusBadge from "../shared/StatusBadge";
 
 export default function GapDashboard({ obligations, onSelectObligation }) {
   const met = obligations.filter((o) => o.status === "met");

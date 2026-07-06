@@ -1,4 +1,4 @@
-import { HOW_IT_WORKS } from "../data/mockData";
+import { HOW_IT_WORKS } from "../../data/mockData";
 
 export default function Landing() {
   return (
