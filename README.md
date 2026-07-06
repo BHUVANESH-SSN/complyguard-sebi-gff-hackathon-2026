@@ -34,12 +34,12 @@ Compliance teams at brokers, RTAs, and other SEBI intermediaries manually read h
 
 ## Features
 
-- 📄 **Circular upload & parsing** — simulated ingestion pipeline for a SEBI master circular
-- ✅ **Obligation extraction** — structured obligations with deadline, required evidence type, and the exact source clause
-- 📎 **Evidence tracking** — attach evidence to an obligation and watch its status flip to "met"
-- 📊 **Gap dashboard** — at-a-glance view of overdue and pending obligations
-- 🕓 **Audit trail** — immutable log of every ingestion, extraction, and evidence event
-- 🧭 **Guided navigation** — views unlock progressively as the pipeline "runs"
+-  **Circular upload & parsing** — simulated ingestion pipeline for a SEBI master circular
+-  **Obligation extraction** — structured obligations with deadline, required evidence type, and the exact source clause
+-  **Evidence tracking** — attach evidence to an obligation and watch its status flip to "met"
+-  **Gap dashboard** — at-a-glance view of overdue and pending obligations
+-  **Audit trail** — immutable log of every ingestion, extraction, and evidence event
+-  **Guided navigation** — views unlock progressively as the pipeline "runs"
 
 > **Note:** This is a frontend hackathon prototype. All data (circulars, obligations, evidence, audit log) is mocked in [`src/data/mockData.js`](src/data/mockData.js) — there is no backend, LLM, or vector store wired up yet.
 
