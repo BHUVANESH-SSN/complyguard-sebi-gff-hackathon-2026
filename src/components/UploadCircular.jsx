@@ -13,9 +13,11 @@ export default function UploadCircular({ onComplete }) {
   const [dragOver, setDragOver] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
+  const [showSampleNotice, setShowSampleNotice] = useState(false);
   const timeouts = useRef([]);
 
   function startProcessing(name) {
+    setShowSampleNotice(false);
     setFileName(name);
     setProcessing(true);
     setStepIndex(0);
@@ -27,16 +29,23 @@ export default function UploadCircular({ onComplete }) {
     timeouts.current.push(done);
   }
 
+  function useSample() {
+    startProcessing(`${CIRCULAR.name}.pdf`);
+  }
+
   function handleDrop(e) {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    startProcessing(file ? file.name : `${CIRCULAR.name}.pdf`);
+    if (e.dataTransfer.files?.[0]) {
+      setShowSampleNotice(true);
+    }
   }
 
   function handlePick(e) {
-    const file = e.target.files?.[0];
-    startProcessing(file ? file.name : `${CIRCULAR.name}.pdf`);
+    if (e.target.files?.[0]) {
+      setShowSampleNotice(true);
+    }
+    e.target.value = "";
   }
 
   return (
@@ -45,39 +54,57 @@ export default function UploadCircular({ onComplete }) {
         Upload a circular
       </h2>
       <p className="mt-2 text-sm text-neutral-500">
-        Drop a SEBI circular PDF, or use the sample Master Circular for Stock
-        Brokers.
+        This prototype is wired up end-to-end for one document only.
       </p>
 
       {!processing && (
-        <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-          className={`mt-8 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-colors ${
-            dragOver ? "border-violet-400 bg-violet-50/40" : "border-neutral-200"
-          }`}
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-50 text-violet-600">
-            ↑
+        <>
+          <div className="mt-8 rounded-2xl border border-violet-200 bg-violet-50/40 p-8 text-center">
+            <p className="font-mono text-xs font-medium tracking-wide text-violet-700">
+              SAMPLE CIRCULAR
+            </p>
+            <p className="mt-1.5 text-lg font-semibold text-neutral-900">
+              {CIRCULAR.name}
+            </p>
+            <p className="mt-1 text-sm text-neutral-500">
+              {CIRCULAR.pages} pages · {CIRCULAR.intermediary}
+            </p>
+            <button
+              onClick={useSample}
+              className="mt-6 rounded-full bg-emerald-300 px-8 py-3.5 text-base font-semibold text-emerald-950 transition-colors hover:bg-emerald-400"
+            >
+              Run the pipeline on this circular →
+            </button>
           </div>
-          <p className="mt-4 text-sm text-neutral-500">
-            Drag and drop a PDF here, or
-          </p>
-          <label className="mt-3 cursor-pointer rounded-full bg-emerald-300 px-5 py-2.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-400">
-            Choose file
-            <input type="file" accept="application/pdf" className="hidden" onChange={handlePick} />
-          </label>
-          <button
-            onClick={() => startProcessing(`${CIRCULAR.name}.pdf`)}
-            className="mt-4 text-sm text-violet-700 underline underline-offset-2 hover:text-violet-900"
+
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            className={`mt-4 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
+              dragOver ? "border-violet-400 bg-violet-50/40" : "border-neutral-200"
+            }`}
           >
-            or use the sample circular
-          </button>
-        </div>
+            <p className="text-sm text-neutral-400">
+              Or drag and drop your own circular PDF, or{" "}
+              <label className="cursor-pointer text-violet-700 underline underline-offset-2 hover:text-violet-900">
+                choose a file
+                <input type="file" accept="application/pdf" className="hidden" onChange={handlePick} />
+              </label>
+            </p>
+
+            {showSampleNotice && (
+              <p className="mt-4 max-w-sm rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                This prototype only has the sample circular wired up — real
+                PDF ingestion isn't connected yet. Use the sample above to see
+                the pipeline run.
+              </p>
+            )}
+          </div>
+        </>
       )}
 
       {processing && (

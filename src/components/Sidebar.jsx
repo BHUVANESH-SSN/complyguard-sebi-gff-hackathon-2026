@@ -1,13 +1,5 @@
 import { CIRCULAR } from "../data/mockData";
 
-const AVATARS = [
-  { initial: "R", bg: "bg-violet-100", text: "text-violet-700" },
-  { initial: "S", bg: "bg-amber-100", text: "text-amber-700" },
-  { initial: "K", bg: "bg-emerald-100", text: "text-emerald-700" },
-];
-
-const SOCIALS = ["in", "X", "gh", "disc"];
-
 function daysUntil(dateStr) {
   const diff = Math.ceil(
     (new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24)
@@ -64,21 +56,9 @@ export default function Sidebar({ obligations, evidence, auditLog, onOpenDashboa
           </div>
         </dl>
 
-        <div className="mt-5 flex items-center justify-between border-t border-neutral-100 pt-4">
-          <div className="flex -space-x-2">
-            {AVATARS.map((a) => (
-              <div
-                key={a.initial}
-                className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-xs font-semibold ${a.bg} ${a.text}`}
-              >
-                {a.initial}
-              </div>
-            ))}
-          </div>
-          <p className="font-mono text-xs text-neutral-400">
-            {auditLog.length} audit log entries
-          </p>
-        </div>
+        <p className="mt-5 border-t border-neutral-100 pt-4 font-mono text-xs text-neutral-400">
+          {auditLog.length} audit log entries
+        </p>
 
         <button
           onClick={onOpenDashboard}
@@ -87,24 +67,6 @@ export default function Sidebar({ obligations, evidence, auditLog, onOpenDashboa
           Open Gap Dashboard
           <span>→</span>
         </button>
-      </div>
-
-      <div className="rounded-2xl border border-neutral-200 p-5">
-        <p className="font-semibold text-neutral-900">Need help?</p>
-        <p className="mt-1.5 text-sm leading-relaxed text-neutral-500">
-          This is a prototype. For questions about the build, reach out at{" "}
-          <span className="text-violet-700">team@complyguard.dev</span>
-        </p>
-        <div className="mt-4 flex gap-2">
-          {SOCIALS.map((s) => (
-            <div
-              key={s}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 font-mono text-[10px] text-neutral-500"
-            >
-              {s}
-            </div>
-          ))}
-        </div>
       </div>
     </aside>
   );

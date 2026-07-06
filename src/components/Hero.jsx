@@ -1,4 +1,5 @@
 import { CIRCULAR } from "../data/mockData";
+import sebiLogo from "../assets/sebi-logo.png";
 
 export default function Hero({ onStart }) {
   return (
@@ -14,8 +15,8 @@ export default function Hero({ onStart }) {
       <div className="relative mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-white ring-1 ring-white/20">
-              SBI
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white p-1 ring-1 ring-white/20">
+              <img src={sebiLogo} alt="SEBI" className="h-full w-full object-contain" />
             </div>
             <span className="font-mono text-xs tracking-widest text-violet-200">
               {CIRCULAR.issuedBy} AGENTIC COMPLIANCE
@@ -47,18 +48,17 @@ export default function Hero({ onStart }) {
             >
               Try the demo →
             </button>
-            <button className="rounded-full border border-white/20 bg-white/5 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10">
-              Share
-            </button>
           </div>
         </div>
 
         <div className="relative hidden aspect-[4/3] items-center justify-center rounded-2xl bg-gradient-to-br from-violet-800/60 to-indigo-950/60 ring-1 ring-white/10 lg:flex">
           <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-fuchsia-500/20 blur-3xl" />
           <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-indigo-400/20 blur-3xl" />
-          <p className="relative font-mono text-3xl font-bold tracking-widest text-white/20">
-            SEBI
-          </p>
+          <img
+            src={sebiLogo}
+            alt="SEBI"
+            className="relative w-2/3 max-w-[220px] opacity-80"
+          />
         </div>
       </div>
     </div>
