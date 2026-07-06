@@ -1,5 +1,4 @@
-import { CIRCULAR } from "../../data/mockData";
-
+// Removed mockData import
 function daysUntil(dateStr) {
   const diff = Math.ceil(
     (new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24)
@@ -39,7 +38,7 @@ export default function Sidebar({ obligations, evidence, auditLog, onOpenDashboa
           <div className="flex items-center justify-between">
             <dt className="text-neutral-500">Circular</dt>
             <dd className="max-w-[180px] truncate text-right font-medium text-neutral-900">
-              {CIRCULAR.name}
+              {obligations[0]?.circularName || "No active circular"}
             </dd>
           </div>
           <div className="flex items-center justify-between border-t border-neutral-100 pt-3">

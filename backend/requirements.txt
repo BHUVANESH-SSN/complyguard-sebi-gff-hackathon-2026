@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pypdf
+sentence-transformers
+chromadb
+anthropic
+pydantic
+sqlalchemy
+python-multipart
+ollama

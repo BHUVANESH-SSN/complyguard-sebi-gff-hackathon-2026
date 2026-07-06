@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Nav from "./components/layout/Nav";
 import Sidebar from "./components/layout/Sidebar";
 import Hero from "./components/views/Hero";
@@ -7,22 +7,53 @@ import UploadCircular from "./components/views/UploadCircular";
 import ObligationList from "./components/views/ObligationList";
 import GapDashboard from "./components/views/GapDashboard";
 import AuditTrail from "./components/views/AuditTrail";
-import {
-  INITIAL_OBLIGATIONS,
-  INITIAL_EVIDENCE,
-  INITIAL_AUDIT_LOG,
-} from "./data/mockData";
+import { getObligations, getEvidence, getAuditLog, addEvidence } from "./api";
 
 const ALL_VIEWS = ["landing", "upload", "obligations", "dashboard", "audit"];
 
 export default function App() {
   const [view, setView] = useState("landing");
   const [unlocked, setUnlocked] = useState(["landing", "upload"]);
-  const [obligations, setObligations] = useState(INITIAL_OBLIGATIONS);
-  const [evidence, setEvidence] = useState(INITIAL_EVIDENCE);
-  const [auditLog, setAuditLog] = useState(INITIAL_AUDIT_LOG);
+  const [obligations, setObligations] = useState([]);
+  const [evidence, setEvidence] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
 
-  function handleUploadComplete() {
+  const fetchData = async () => {
+    try {
+      const obs = await getObligations();
+      const evs = await getEvidence();
+      const logs = await getAuditLog();
+      
+      setObligations(obs.map(o => ({
+        id: o.id,
+        circularName: o.circular_name,
+        obligationText: o.obligation_text,
+        intermediary: o.intermediary,
+        deadline: o.deadline,
+        evidenceType: o.evidence_type,
+        sourceChunk: o.source_chunk,
+        status: o.status
+      })));
+      
+      setEvidence(evs.map(e => ({
+        id: e.id,
+        obligationId: e.obligation_id,
+        description: e.description,
+        submittedAt: e.submitted_at
+      })));
+      
+      setAuditLog(logs);
+    } catch (error) {
+      console.error("Failed to fetch data (backend might not be running).", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function handleUploadComplete() {
+    await fetchData();
     setUnlocked(ALL_VIEWS); // full nav available once the pipeline has "run"
     setView("obligations");
   }
@@ -32,36 +63,13 @@ export default function App() {
     setView("upload");
   }
 
-  function handleAttachEvidence(obligationId, description) {
-    const ob = obligations.find((o) => o.id === obligationId);
-
-    setEvidence((prev) => [
-      ...prev,
-      {
-        id: prev.length + 1,
-        obligationId,
-        description,
-        submittedAt: new Date().toISOString(),
-      },
-    ]);
-    setObligations((prev) =>
-      prev.map((o) => (o.id === obligationId ? { ...o, status: "met" } : o))
-    );
-    setAuditLog((prev) => [
-      ...prev,
-      {
-        id: prev.length + 1,
-        action: "Evidence added",
-        detail: `Evidence attached to obligation #${obligationId} (${ob?.obligationText.slice(0, 50)}...).`,
-        timestamp: new Date().toISOString(),
-      },
-      {
-        id: prev.length + 2,
-        action: "Status updated",
-        detail: `Obligation #${obligationId} moved to "met".`,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
+  async function handleAttachEvidence(obligationId, description) {
+    try {
+      await addEvidence(obligationId, description);
+      await fetchData(); // refresh state from API
+    } catch (error) {
+      console.error("Failed to add evidence:", error);
+    }
   }
 
   return (
@@ -96,7 +104,7 @@ export default function App() {
       </div>
 
       <footer className="border-t border-neutral-100 py-8 text-center text-xs text-neutral-300">
-        ComplyGuard prototype — mock data, no backend yet. Built from docs/plan.md.
+        ComplyGuard — Connects to Python FastAPI Backend.
       </footer>
     </div>
   );

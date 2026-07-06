@@ -1,6 +1,5 @@
 import { useState } from "react";
 import StatusBadge from "../shared/StatusBadge";
-import { CIRCULAR } from "../../data/mockData";
 
 export default function ObligationList({ obligations, evidence, onAttachEvidence }) {
   const [expandedId, setExpandedId] = useState(null);
@@ -20,11 +19,15 @@ export default function ObligationList({ obligations, evidence, onAttachEvidence
         <h2 className="text-2xl font-bold tracking-tight text-neutral-900">
           Obligations
         </h2>
-        <p className="font-mono text-xs text-neutral-400">{CIRCULAR.name}</p>
+        <p className="font-mono text-xs text-neutral-400">
+          {obligations[0]?.circularName || "SEBI Circular"}
+        </p>
       </div>
       <p className="mt-2 text-sm text-neutral-500">
         Extracted for intermediary:{" "}
-        <span className="font-medium text-neutral-700">{CIRCULAR.intermediary}</span>.
+        <span className="font-medium text-neutral-700">
+          {obligations[0]?.intermediary || "N/A"}
+        </span>.
         Click a row to see the exact source text it was extracted from.
       </p>
 

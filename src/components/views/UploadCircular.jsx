@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { CIRCULAR } from "../../data/mockData";
+import { uploadCircular } from "../../api";
 
 const PROCESSING_STEPS = [
   "Parsing PDF text...",
@@ -16,34 +17,48 @@ export default function UploadCircular({ onComplete }) {
   const [showSampleNotice, setShowSampleNotice] = useState(false);
   const timeouts = useRef([]);
 
-  function startProcessing(name) {
+  async function startProcessing(file, fallbackName = null) {
     setShowSampleNotice(false);
-    setFileName(name);
+    setFileName(file ? file.name : fallbackName);
     setProcessing(true);
     setStepIndex(0);
+    
+    // Animate UI steps roughly matching the processing
     PROCESSING_STEPS.forEach((_, i) => {
-      const t = setTimeout(() => setStepIndex(i), (i + 1) * 550);
+      const t = setTimeout(() => setStepIndex(i), (i + 1) * 800);
       timeouts.current.push(t);
     });
-    const done = setTimeout(() => onComplete(), PROCESSING_STEPS.length * 550 + 450);
-    timeouts.current.push(done);
+
+    try {
+      if (file) {
+        await uploadCircular(file);
+      } else {
+        // If no real file, wait for simulation
+        await new Promise(r => setTimeout(r, PROCESSING_STEPS.length * 800 + 400));
+      }
+      onComplete();
+    } catch (e) {
+      console.error(e);
+      alert("Failed to process circular. Make sure the backend is running.");
+      setProcessing(false);
+    }
   }
 
   function useSample() {
-    startProcessing(`${CIRCULAR.name}.pdf`);
+    startProcessing(null, `${CIRCULAR.name}.pdf`);
   }
 
   function handleDrop(e) {
     e.preventDefault();
     setDragOver(false);
     if (e.dataTransfer.files?.[0]) {
-      setShowSampleNotice(true);
+      startProcessing(e.dataTransfer.files[0]);
     }
   }
 
   function handlePick(e) {
     if (e.target.files?.[0]) {
-      setShowSampleNotice(true);
+      startProcessing(e.target.files[0]);
     }
     e.target.value = "";
   }
@@ -98,9 +113,7 @@ export default function UploadCircular({ onComplete }) {
 
             {showSampleNotice && (
               <p className="mt-4 max-w-sm rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                This prototype only has the sample circular wired up — real
-                PDF ingestion isn't connected yet. Use the sample above to see
-                the pipeline run.
+                You can now upload a real PDF and the backend will process it.
               </p>
             )}
           </div>
