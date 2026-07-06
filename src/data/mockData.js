@@ -1,8 +1,9 @@
 export const CIRCULAR = {
-  name: "Master Circular for Stock Brokers, 2024",
+  name: "SEBI Master Circular for Stock Brokers (Demo Edition)",
   intermediary: "Stock Broker",
-  pages: 214,
+  pages: 2,
   issuedBy: "SEBI",
+  file: "/sebi_demo_circular.pdf",
 };
 
 // Obligations pre-loaded to show a realistic post-extraction state.

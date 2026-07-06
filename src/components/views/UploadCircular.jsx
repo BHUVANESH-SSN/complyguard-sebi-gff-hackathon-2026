@@ -30,18 +30,20 @@ export default function UploadCircular({ onComplete }) {
     });
 
     try {
-      if (file) {
-        await uploadCircular(file);
-      } else {
-        // If no real file, wait for simulation
-        await new Promise(r => setTimeout(r, PROCESSING_STEPS.length * 800 + 400));
-      }
+      const fileToUpload = file || (await fetchSampleFile());
+      await uploadCircular(fileToUpload);
       onComplete();
     } catch (e) {
       console.error(e);
       alert("Failed to process circular. Make sure the backend is running.");
       setProcessing(false);
     }
+  }
+
+  async function fetchSampleFile() {
+    const res = await fetch(CIRCULAR.file);
+    const blob = await res.blob();
+    return new File([blob], `${CIRCULAR.name}.pdf`, { type: "application/pdf" });
   }
 
   function useSample() {

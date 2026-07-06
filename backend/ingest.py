@@ -19,7 +19,7 @@ def extract_text_from_pdf(file_path: str) -> str:
             text += extracted + "\n"
     return text
 
-def semantic_chunking(text: str, chunk_size: int = 1500, overlap: int = 200) -> list[str]:
+def semantic_chunking(text: str, chunk_size: int = 3000, overlap: int = 200) -> list[str]:
     """
     A custom recursive character text splitter.
     Splits by double newline, then single newline, then space.

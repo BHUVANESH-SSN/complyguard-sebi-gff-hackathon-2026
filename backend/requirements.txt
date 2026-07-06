@@ -3,8 +3,8 @@ uvicorn
 pypdf
 sentence-transformers
 chromadb
-anthropic
+groq
+python-dotenv
 pydantic
 sqlalchemy
 python-multipart
-ollama
