@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-multipart
+pydantic
+sqlalchemy
+psycopg2-binary
+pypdf
+sentence-transformers
+qdrant-client
+groq
+python-dotenv
+langgraph
+langchain-core
+pytest>=7.0
+httpx
