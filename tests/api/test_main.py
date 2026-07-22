@@ -43,20 +43,20 @@ def test_gaps_returns_501_before_real_models_are_pasted_in():
     assert response.status_code == 501
 
 
-def test_upload_returns_501_while_pdf_cleaner_is_still_a_stub():
-    pdf_bytes = b"%PDF-1.4 minimal"
+def test_upload_returns_422_for_an_unreadable_pdf():
+    pdf_bytes = b"%PDF-1.4 minimal"  # not a real PDF, PyMuPDF can't parse it
     response = client.post(
         "/upload",
         files={"file": ("test_upload_scaffold.pdf", pdf_bytes, "application/pdf")},
     )
-    assert response.status_code == 501
-    assert "PDF cleaning not wired up yet" in response.json()["detail"]
+    assert response.status_code == 422
+    assert "PDF cleaning failed" in response.json()["detail"]
 
     _cleanup_uploaded("test_upload_scaffold.pdf")
 
 
 def test_upload_returns_zero_clauses_when_none_found():
-    with patch("app.api.main.clean_pdf", return_value="   \n\n  "):
+    with patch("app.api.main.extract_and_clean", return_value="   \n\n  "):
         response = client.post(
             "/upload",
             files={"file": ("empty.pdf", b"%PDF-1.4", "application/pdf")},
@@ -82,7 +82,7 @@ def test_upload_processes_clauses_and_calls_supersession():
 
     try:
         with (
-            patch("app.api.main.clean_pdf", return_value="1. Do X.\n\n2. Do Y."),
+            patch("app.api.main.extract_and_clean", return_value="1. Do X.\n\n2. Do Y."),
             patch("app.api.main.build_graph", return_value=fake_graph),
             patch("app.api.main.mark_superseded_obligations", return_value=["obl-old"]) as mock_supersede,
         ):
@@ -143,7 +143,7 @@ def test_upload_marks_pending_review_and_protects_its_obligation_from_supersessi
 
     try:
         with (
-            patch("app.api.main.clean_pdf", return_value="1. Do X quarterly."),
+            patch("app.api.main.extract_and_clean", return_value="1. Do X quarterly."),
             patch("app.api.main.build_graph", return_value=fake_graph),
             patch("app.api.main.mark_superseded_obligations", return_value=[]) as mock_supersede,
         ):
@@ -173,7 +173,7 @@ def test_upload_skips_supersession_when_a_clause_errors():
 
     try:
         with (
-            patch("app.api.main.clean_pdf", return_value="1. Do X."),
+            patch("app.api.main.extract_and_clean", return_value="1. Do X."),
             patch("app.api.main.build_graph", return_value=fake_graph),
             patch("app.api.main.mark_superseded_obligations") as mock_supersede,
         ):

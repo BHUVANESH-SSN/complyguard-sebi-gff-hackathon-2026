@@ -4,11 +4,11 @@ import sys
 from app.embeddings.embedder import embed_texts
 from app.embeddings.qdrant_client import ensure_collection, get_client, upsert_chunks
 from app.ingestion.clause_splitter import split_into_clauses
-from app.ingestion.pdf_cleaner import clean_pdf
+from app.ingestion.pdf_cleaner import extract_and_clean
 
 
 def run_ingest(pdf_path: str) -> list[str]:
-    cleaned_text = clean_pdf(pdf_path)
+    cleaned_text = extract_and_clean(pdf_path)
     clauses = split_into_clauses(cleaned_text)
     if not clauses:
         print(f"No clauses found in {pdf_path}")

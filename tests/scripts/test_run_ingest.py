@@ -5,7 +5,7 @@ from scripts.run_ingest import run_ingest
 
 def test_run_ingest_orchestrates_pipeline_and_returns_ids():
     with (
-        patch("scripts.run_ingest.clean_pdf", return_value="1. Do X.\n\n2. Do Y.") as mock_clean,
+        patch("scripts.run_ingest.extract_and_clean", return_value="1. Do X.\n\n2. Do Y.") as mock_clean,
         patch("scripts.run_ingest.embed_texts", return_value=[[0.1], [0.2]]) as mock_embed,
         patch("scripts.run_ingest.get_client", return_value="fake-client"),
         patch("scripts.run_ingest.ensure_collection") as mock_ensure,
@@ -21,5 +21,5 @@ def test_run_ingest_orchestrates_pipeline_and_returns_ids():
 
 
 def test_run_ingest_returns_empty_list_when_no_clauses_found():
-    with patch("scripts.run_ingest.clean_pdf", return_value="   "):
+    with patch("scripts.run_ingest.extract_and_clean", return_value="   "):
         assert run_ingest("data/raw_pdfs/empty.pdf") == []

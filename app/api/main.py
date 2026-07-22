@@ -17,7 +17,7 @@ from app.db.database import Base, engine, get_db
 import app.db.models  # noqa: F401 — registers all tables on Base.metadata before create_all
 from app.graph.build_graph import build_graph
 from app.ingestion.clause_splitter import split_into_clauses
-from app.ingestion.pdf_cleaner import clean_pdf
+from app.ingestion.pdf_cleaner import extract_and_clean
 from app.services.gap_engine import get_gaps
 from app.services.supersession import mark_superseded_obligations
 
@@ -56,14 +56,13 @@ async def upload_circular(file: UploadFile = File(...), db: Session = Depends(ge
     circular_id = os.path.splitext(file.filename)[0]
 
     try:
-        cleaned_text = clean_pdf(file_path)
+        cleaned_text = extract_and_clean(file_path)
     except Exception as exc:
-        # clean_pdf is still a stub awaiting the user's real implementation.
-        # Fail fast here, before build_graph() ever runs, so this doesn't pay
-        # the cost of opening a real Postgres checkpointer connection for a
-        # request that can't proceed anyway.
+        # Fail fast here, before build_graph() ever runs, so a bad/unreadable
+        # PDF doesn't pay the cost of opening a real Postgres checkpointer
+        # connection for a request that can't proceed anyway.
         raise HTTPException(
-            status_code=501, detail=f"PDF cleaning not wired up yet: {exc}"
+            status_code=422, detail=f"PDF cleaning failed: {exc}"
         ) from exc
 
     clauses = split_into_clauses(cleaned_text)
