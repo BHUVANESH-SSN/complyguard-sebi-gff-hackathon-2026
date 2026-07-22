@@ -1,15 +1,36 @@
-from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.postgres import PostgresSaver
-from langgraph.types import interrupt
-from .state import ComplianceState
-from . import nodes
+import os
+from contextlib import ExitStack
 
-PG_CONN = "postgresql://regops:regops@localhost:5432/regops_db"
+from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.graph import END, StateGraph
+
+from . import nodes
+from .state import ComplianceState
+
+_exit_stack = ExitStack()
+_checkpointer = None
+
+
+def _get_checkpointer():
+    global _checkpointer
+    if _checkpointer is None:
+        conn_string = os.environ.get(
+            "DATABASE_URL", "postgresql://regops:regops@localhost:5432/regops"
+        )
+        _checkpointer = _exit_stack.enter_context(
+            PostgresSaver.from_conn_string(conn_string)
+        )
+        _checkpointer.setup()
+    return _checkpointer
+
 
 def route_after_diff(state: ComplianceState) -> str:
     if state["diff_status"] in ("amended", "superseded"):
         return "human_review"
+    if state["diff_status"] == "unchanged":
+        return "finalize"
     return "mapper"
+
 
 def route_after_evidence(state: ComplianceState) -> str:
     if state["evidence_status"] == "missing":
@@ -18,7 +39,8 @@ def route_after_evidence(state: ComplianceState) -> str:
         return "human_review"
     return "finalize"
 
-def build_graph():
+
+def build_graph(checkpointer=None):
     g = StateGraph(ComplianceState)
     g.add_node("chunker", nodes.chunker_node)
     g.add_node("embedder", nodes.embedder_node)
@@ -35,7 +57,7 @@ def build_graph():
     g.add_edge("embedder", "extractor")
     g.add_edge("extractor", "differ")
     g.add_conditional_edges("differ", route_after_diff,
-        {"human_review": "human_review", "mapper": "mapper"})
+        {"human_review": "human_review", "mapper": "mapper", "finalize": "finalize"})
     g.add_edge("human_review", "mapper")
     g.add_edge("mapper", "evidence_check")
     g.add_conditional_edges("evidence_check", route_after_evidence,
@@ -43,5 +65,4 @@ def build_graph():
     g.add_edge("gap_engine", "finalize")
     g.add_edge("finalize", END)
 
-    checkpointer = PostgresSaver.from_conn_string(PG_CONN)
-    return g.compile(checkpointer=checkpointer, interrupt_before=["human_review"])
+    return g.compile(checkpointer=checkpointer or _get_checkpointer())
