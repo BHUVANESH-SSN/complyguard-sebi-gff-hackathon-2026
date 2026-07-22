@@ -1989,20 +1989,39 @@ near the other `langgraph` line):
 langgraph-checkpoint-postgres==3.1.0
 ```
 
-- [ ] **Step 4: Ensure Postgres tables get created at API startup**
+- [ ] **Step 4: Ensure Postgres tables get created at API startup — via lifespan, not at import time**
+
+Every module in this codebase is import-safe by design (constructing a lazy `Engine` is
+fine; actually connecting is not). `Base.metadata.create_all(bind=engine)` opens a real
+connection, so it must not run as a side effect of importing `app.api.main` — otherwise
+anything that imports the module (including this project's own tests) requires a live
+Postgres. Verified: `fastapi.testclient.TestClient(app)` used without a `with` block
+(the pattern `tests/api/test_main.py` and `tests/api/test_routes_review.py` already use)
+never runs FastAPI's startup/lifespan handlers, even across requests — so wiring table
+creation into a `lifespan` handler keeps every existing test import-safe while still
+running for a real `uvicorn` deployment (which always drives the ASGI lifespan
+protocol).
 
 In `app/api/main.py`, add this import near the existing `from app.db.database import get_db`
 line:
 
 ```python
+from contextlib import asynccontextmanager
+
 from app.db.database import Base, engine
 import app.db.models  # noqa: F401 — registers all tables on Base.metadata before create_all
 ```
 
-Add this line immediately after those imports, before `app = FastAPI(...)`:
+Replace the existing `app = FastAPI(title="RegOps AI API")` line with:
 
 ```python
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(title="RegOps AI API", lifespan=lifespan)
 ```
 
 - [ ] **Step 5: Run the full test suite**
