@@ -3,6 +3,11 @@ import hashlib
 import json
 from datetime import date, datetime, timedelta
 
+import os
+import time
+
+from groq import APIConnectionError, Groq
+
 from app.embeddings.embedder import embed_texts
 
 from .state import ComplianceState
@@ -41,3 +46,58 @@ def resolve_due_date(deadline_rule: str | None, today: date) -> date | None:
 def compute_audit_hash(prev_hash: str, action: dict, timestamp: datetime) -> str:
     payload = prev_hash + json.dumps(action, sort_keys=True) + timestamp.isoformat()
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+MAX_RETRIES = 3
+
+EXTRACTION_PROMPT = """
+You are a regulatory compliance AI. Read the SEBI circular clause below and extract
+the single compliance obligation it imposes.
+
+Return the result strictly as a JSON object matching this schema:
+{{
+    "requirement": "Clear description of what must be done",
+    "frequency": "How often this recurs (e.g. one-time, monthly, quarterly, annual)",
+    "evidence_type": "What proof is needed to show compliance",
+    "deadline_rule": "An ISO date YYYY-MM-DD if the clause gives a specific calendar
+        date, a recognized frequency keyword (monthly/quarterly/annual) if it recurs
+        on a schedule with no fixed date, or null if open-ended with no deadline"
+}}
+
+Do not include any other text in your response, only the JSON object.
+
+Clause to analyze:
+{clause_text}
+"""
+
+
+def extractor_node(state: ComplianceState) -> dict:
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY environment variable is not set")
+
+    client = Groq(api_key=api_key)
+    prompt = EXTRACTION_PROMPT.format(clause_text=state["raw_clause"])
+
+    response = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = client.chat.completions.create(
+                model=GROQ_MODEL,
+                temperature=0,
+                max_tokens=800,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            break
+        except APIConnectionError:
+            if attempt == MAX_RETRIES - 1:
+                raise
+            time.sleep(1.5 * (attempt + 1))
+
+    content = response.choices[0].message.content
+    content = content.replace("```json", "").replace("```", "").strip()
+    start_idx = content.find("{")
+    end_idx = content.rfind("}") + 1
+    obligation = json.loads(content[start_idx:end_idx])
+    return {"extracted_obligation": obligation}
