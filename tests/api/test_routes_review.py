@@ -1,0 +1,78 @@
+import subprocess
+import sys
+from unittest.mock import MagicMock, patch
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+
+def test_importing_routes_review_module_does_not_build_the_graph():
+    result = subprocess.run(
+        [sys.executable, "-c", (
+            "from unittest.mock import patch\n"
+            "with patch('app.graph.build_graph.build_graph') as m:\n"
+            "    import app.api.routes_review\n"
+            "    assert not m.called, 'build_graph was called at import time'\n"
+            "print('OK')"
+        )],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "OK" in result.stdout
+
+
+def test_submit_decision_builds_graph_lazily_and_resumes_with_command():
+    import app.api.routes_review as routes_review_module
+
+    routes_review_module._graph = None
+    fake_graph = MagicMock()
+    fake_graph.invoke.return_value = {"diff_status": "amended"}
+
+    try:
+        with patch("app.api.routes_review.build_graph", return_value=fake_graph) as mock_build:
+            app = FastAPI()
+            app.include_router(routes_review_module.router)
+            client = TestClient(app)
+
+            response = client.post(
+                "/review/circular-1:clause-1/decision",
+                params={"decision": "approve", "actor": "alice"},
+            )
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "resumed", "state": {"diff_status": "amended"}}
+        mock_build.assert_called_once()
+
+        from langgraph.types import Command
+
+        call_args = fake_graph.invoke.call_args
+        command_arg = call_args.args[0]
+        assert isinstance(command_arg, Command)
+        assert command_arg.resume == {"decision": "approve", "actor": "alice"}
+        assert call_args.kwargs["config"] == {
+            "configurable": {"thread_id": "circular-1:clause-1"}
+        }
+    finally:
+        routes_review_module._graph = None
+
+
+def test_submit_decision_reuses_cached_graph_across_calls():
+    import app.api.routes_review as routes_review_module
+
+    routes_review_module._graph = None
+    fake_graph = MagicMock()
+    fake_graph.invoke.return_value = {}
+
+    try:
+        with patch("app.api.routes_review.build_graph", return_value=fake_graph) as mock_build:
+            app = FastAPI()
+            app.include_router(routes_review_module.router)
+            client = TestClient(app)
+
+            client.post("/review/t1/decision", params={"decision": "approve"})
+            client.post("/review/t1/decision", params={"decision": "reject"})
+
+        mock_build.assert_called_once()
+    finally:
+        routes_review_module._graph = None

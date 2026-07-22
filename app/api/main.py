@@ -11,6 +11,7 @@ from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
+from app.api.routes_review import router as review_router
 from app.db.database import get_db
 from app.services.gap_engine import get_gaps
 
@@ -23,6 +24,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(review_router)
 
 
 @app.get("/health")
