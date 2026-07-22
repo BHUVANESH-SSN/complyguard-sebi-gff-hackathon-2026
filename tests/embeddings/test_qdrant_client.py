@@ -49,8 +49,11 @@ def test_upsert_chunks_sends_one_point_per_chunk():
 def test_search_maps_results_to_text_and_score():
     client = MagicMock()
     hit = MagicMock(payload={"text": "clause one"}, score=0.9)
-    client.search.return_value = [hit]
+    client.query_points.return_value = MagicMock(points=[hit])
 
     results = search(client, query_vector=[0.1, 0.2])
 
     assert results == [{"text": "clause one", "score": 0.9}]
+    client.query_points.assert_called_once_with(
+        collection_name=DEFAULT_COLLECTION, query=[0.1, 0.2], limit=3
+    )

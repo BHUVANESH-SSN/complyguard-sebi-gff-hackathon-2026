@@ -47,7 +47,7 @@ def search(
     limit: int = 3,
     collection_name: str = DEFAULT_COLLECTION,
 ) -> list[dict]:
-    results = client.search(
-        collection_name=collection_name, query_vector=query_vector, limit=limit
+    response = client.query_points(
+        collection_name=collection_name, query=query_vector, limit=limit
     )
-    return [{"text": r.payload.get("text"), "score": r.score} for r in results]
+    return [{"text": p.payload.get("text"), "score": p.score} for p in response.points]
