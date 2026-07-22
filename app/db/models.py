@@ -1,8 +1,7 @@
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON
-from sqlalchemy.orm import declarative_base
 import datetime
 
-Base = declarative_base()
+from app.db.database import Base
 
 class Obligation(Base):
     __tablename__ = "obligations"

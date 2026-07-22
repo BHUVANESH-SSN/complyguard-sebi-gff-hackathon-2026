@@ -8,7 +8,7 @@ class ComplianceState(TypedDict):
     embedding: Optional[List[float]]
     extracted_obligation: Optional[dict]
     similarity_match: Optional[dict]
-    diff_status: Literal["new", "amended", "superseded", None]
+    diff_status: Literal["new", "amended", "superseded", "unchanged", None]
     task: Optional[dict]
     evidence_status: Literal["present", "missing", "invalid", None]
     human_decision: Optional[str]
