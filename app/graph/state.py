@@ -1,9 +1,15 @@
-"""Placeholder for the LangGraph pipeline's shared state schema.
+from typing import TypedDict, Literal, Optional, List
 
-Real implementation (a TypedDict or Pydantic model describing graph
-state) is pasted in separately.
-"""
-
-
-class GraphState(dict):
-    """Placeholder state type — replace with the real schema."""
+class ComplianceState(TypedDict):
+    circular_id: str
+    clause_id: str
+    raw_clause: str
+    heading: str
+    embedding: Optional[List[float]]
+    extracted_obligation: Optional[dict]
+    similarity_match: Optional[dict]
+    diff_status: Literal["new", "amended", "superseded", None]
+    task: Optional[dict]
+    evidence_status: Literal["present", "missing", "invalid", None]
+    human_decision: Optional[str]
+    audit_log: List[dict]
