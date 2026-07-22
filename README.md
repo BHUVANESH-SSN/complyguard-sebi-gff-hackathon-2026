@@ -103,7 +103,7 @@ python -m scripts.run_diff "<clause text>"
 ### 6. Start the API
 
 ```bash
-uvicorn app.api.main:app --reload --port 8080
+uvicorn app.api.main:app --reload --port 8000
 ```
 
 ### 7. Start the frontend
@@ -114,7 +114,7 @@ npm install
 npm run dev
 ```
 
-The dashboard is available at `http://localhost:5173` and talks to the API at `http://localhost:8080`.
+The dashboard is available at `http://localhost:5173` and talks to the API at `http://localhost:8000`.
 
 ## Project structure
 

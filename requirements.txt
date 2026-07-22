@@ -6,7 +6,7 @@ sqlalchemy
 psycopg2-binary
 pypdf
 sentence-transformers
-qdrant-client
+qdrant-client==1.18.0
 groq
 python-dotenv
 langgraph

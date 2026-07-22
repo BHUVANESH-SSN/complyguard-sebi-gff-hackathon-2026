@@ -3,6 +3,7 @@ import pytest
 from app.ingestion.pdf_cleaner import clean_pdf
 from app.graph.build_graph import build_graph
 from app.graph.state import GraphState
+import app.graph.nodes  # noqa: F401
 from app.db.models import ObligationDB, EvidenceDB, AuditLogDB
 from app.db.seed_synthetic import seed
 from app.api.routes_review import router
