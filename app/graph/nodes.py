@@ -233,6 +233,14 @@ def gap_engine_node(state: ComplianceState) -> dict:
 
 
 def _write_audit_entry(thread_id: str, node_name: str, action: dict, actor: str) -> None:
+    # KNOWN LIMITATION: this read-latest-hash-then-commit sequence is not
+    # concurrency-safe. Two writers calling this at the same time (e.g. two
+    # reviewers resuming different paused threads simultaneously) can both
+    # read the same "latest" row, compute the same prev_hash, and commit —
+    # forking the chain and defeating tamper-evidence. Safe for sequential
+    # use (a single run_diff loop, one request at a time); a real fix needs
+    # row-level locking (e.g. SELECT ... FOR UPDATE on the tail row) or a
+    # single serialized writer, deliberately not implemented here.
     db = SessionLocal()
     try:
         last = db.query(AuditTrail).order_by(AuditTrail.timestamp.desc()).first()
