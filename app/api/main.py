@@ -1,6 +1,7 @@
 """FastAPI application wiring for RegOps AI."""
 import os
 import shutil
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 
@@ -13,9 +14,18 @@ from sqlalchemy.orm import Session
 
 from app.api.routes_review import router as review_router
 from app.db.database import get_db
+from app.db.database import Base, engine
+import app.db.models  # noqa: F401 — registers all tables on Base.metadata before create_all
 from app.services.gap_engine import get_gaps
 
-app = FastAPI(title="RegOps AI API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(title="RegOps AI API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
