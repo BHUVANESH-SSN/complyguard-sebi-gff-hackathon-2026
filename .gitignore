@@ -31,3 +31,11 @@ dist-ssr
 *.key
 *.enc
 credentials.json
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Generated data
+data/processed/
