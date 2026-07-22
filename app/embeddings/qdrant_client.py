@@ -50,4 +50,7 @@ def search(
     response = client.query_points(
         collection_name=collection_name, query=query_vector, limit=limit
     )
-    return [{"text": p.payload.get("text"), "score": p.score} for p in response.points]
+    return [
+        {"text": p.payload.get("text"), "score": p.score, "payload": p.payload}
+        for p in response.points
+    ]
