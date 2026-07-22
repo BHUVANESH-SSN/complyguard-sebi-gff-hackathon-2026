@@ -9,6 +9,7 @@ import time
 from groq import APIConnectionError, Groq
 
 from app.embeddings.embedder import embed_texts
+from app.embeddings.qdrant_client import ensure_collection, get_client, search
 
 from .state import ComplianceState
 
@@ -101,3 +102,24 @@ def extractor_node(state: ComplianceState) -> dict:
     end_idx = content.rfind("}") + 1
     obligation = json.loads(content[start_idx:end_idx])
     return {"extracted_obligation": obligation}
+
+
+SIMILARITY_THRESHOLD = 0.85
+
+
+def _normalize(text: str) -> str:
+    return " ".join(text.split()).strip().lower()
+
+
+def differ_node(state: ComplianceState) -> dict:
+    client = get_client()
+    ensure_collection(client, vector_size=len(state["embedding"]))
+    hits = search(client, state["embedding"], limit=1)
+
+    if not hits or hits[0]["score"] < SIMILARITY_THRESHOLD:
+        return {"diff_status": "new", "similarity_match": None}
+
+    top = hits[0]
+    if _normalize(top["text"]) == _normalize(state["raw_clause"]):
+        return {"diff_status": "unchanged", "similarity_match": top}
+    return {"diff_status": "amended", "similarity_match": top}
