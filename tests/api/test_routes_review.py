@@ -27,6 +27,7 @@ def test_submit_decision_builds_graph_lazily_and_resumes_with_command():
 
     routes_review_module._graph = None
     fake_graph = MagicMock()
+    fake_graph.get_state.return_value = MagicMock(next=("human_review",))
     fake_graph.invoke.return_value = {"diff_status": "amended"}
 
     try:
@@ -62,6 +63,7 @@ def test_submit_decision_reuses_cached_graph_across_calls():
 
     routes_review_module._graph = None
     fake_graph = MagicMock()
+    fake_graph.get_state.return_value = MagicMock(next=("human_review",))
     fake_graph.invoke.return_value = {}
 
     try:
@@ -74,5 +76,32 @@ def test_submit_decision_reuses_cached_graph_across_calls():
             client.post("/review/t1/decision", params={"decision": "reject"})
 
         mock_build.assert_called_once()
+    finally:
+        routes_review_module._graph = None
+
+
+def test_submit_decision_returns_409_when_thread_is_not_paused():
+    import app.api.routes_review as routes_review_module
+
+    routes_review_module._graph = None
+    fake_graph = MagicMock()
+    # Empty `next` means either the thread never existed, or it already ran
+    # to completion — either way, there is nothing paused to resume.
+    fake_graph.get_state.return_value = MagicMock(next=())
+
+    try:
+        with patch("app.api.routes_review.build_graph", return_value=fake_graph):
+            app = FastAPI()
+            app.include_router(routes_review_module.router)
+            client = TestClient(app)
+
+            response = client.post(
+                "/review/circular-1:clause-1/decision",
+                params={"decision": "approve", "actor": "alice"},
+            )
+
+        assert response.status_code == 409
+        assert "no pending review" in response.json()["detail"].lower()
+        fake_graph.invoke.assert_not_called()
     finally:
         routes_review_module._graph = None

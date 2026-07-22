@@ -1,20 +1,38 @@
 import os
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.api.main import app
 from app.db.database import Base, get_db
+from app.db.models import Obligation, Task
 
 client = TestClient(app)
 
 
-def _override_get_db_with_sqlite():
-    engine = create_engine("sqlite:///:memory:")
+def _make_sqlite_session_factory():
+    # FastAPI runs sync route handlers (like these) in a worker thread, not
+    # the thread that seeds test data — plain sqlite:///:memory: gives each
+    # thread its own private, empty database (SingletonThreadPool), so a
+    # session opened during the request would see "no such table" even
+    # though the test just seeded rows moments earlier. StaticPool +
+    # check_same_thread=False shares the one real in-memory connection
+    # across threads instead.
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(engine)
-    TestSessionLocal = sessionmaker(bind=engine)
+    return sessionmaker(bind=engine)
+
+
+def _override_get_db_with_sqlite():
+    TestSessionLocal = _make_sqlite_session_factory()
 
     def override():
         db = TestSessionLocal()
@@ -38,9 +56,41 @@ def test_health_check_returns_ok():
     assert response.json() == {"status": "ok"}
 
 
-def test_gaps_returns_501_before_real_models_are_pasted_in():
-    response = client.get("/gaps")
-    assert response.status_code == 501
+def test_gaps_returns_real_tasks_from_the_database():
+    # Models stopped being stubs a while ago — this used to assert a 501
+    # here (relying on there being no reachable Postgres to force an
+    # exception), which silently broke the moment a real Postgres actually
+    # became reachable in this environment. Test against a real, isolated
+    # in-memory DB instead of depending on ambient dev-environment state.
+    TestSessionLocal = _make_sqlite_session_factory()
+
+    seed_db = TestSessionLocal()
+    seed_db.add(Obligation(id="obl-1", clause_id="c1", requirement="Do X",
+                            frequency="annual", evidence_type="policy",
+                            deadline_rule="annual"))
+    seed_db.add(Task(id="task-1", obligation_id="obl-1", owner="compliance",
+                      due_date=datetime(2020, 1, 1), status="open"))
+    seed_db.commit()
+    seed_db.close()
+
+    def override():
+        db = TestSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override
+    try:
+        response = client.get("/gaps")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["id"] == "task-1"
+    assert body[0]["status"] == "overdue"
 
 
 def test_upload_returns_422_for_an_unreadable_pdf():
