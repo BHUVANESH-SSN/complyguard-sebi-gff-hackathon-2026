@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, inspect
 
 from app.db.database import Base as DatabaseBase
-from app.db.models import AuditTrail, EvidenceLog, Obligation, Task
+from app.db.models import Obligation
 
 
 def test_models_share_the_database_base():

@@ -1,4 +1,3 @@
-import os
 
 from app.db.database import make_engine
 
