@@ -15,7 +15,11 @@ from sqlalchemy.orm import Session
 from app.api.routes_review import router as review_router
 from app.db.database import Base, engine, get_db
 import app.db.models  # noqa: F401 — registers all tables on Base.metadata before create_all
+from app.graph.build_graph import build_graph
+from app.ingestion.clause_splitter import split_into_clauses
+from app.ingestion.pdf_cleaner import clean_pdf
 from app.services.gap_engine import get_gaps
+from app.services.supersession import mark_superseded_obligations
 
 
 @asynccontextmanager
@@ -49,31 +53,91 @@ async def upload_circular(file: UploadFile = File(...), db: Session = Depends(ge
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    try:
-        # KNOWN GAP: build_graph() is real now (the LangGraph pipeline is fully
-        # wired — see app/graph/), but this endpoint still invokes it with a
-        # whole-document {"file_path", "filename"} shape left over from before
-        # ComplianceState existed. The graph expects one clause at a time
-        # (circular_id/clause_id/raw_clause/heading — see scripts/run_diff.py
-        # for the correct shape), so this call always fails with a KeyError,
-        # caught below and reported as 501. Wiring /upload into the real
-        # per-clause pipeline (clean -> split -> loop -> invoke ->
-        # mark_superseded_obligations) is a deliberate, separate design
-        # decision (streaming vs. background job) — not done here.
-        # NOTE: build_graph() also opens a real Postgres checkpointer
-        # connection as a side effect of being called, even though this
-        # request still ends in 501 — so this endpoint is not free to call
-        # today without Postgres reachable.
-        from app.graph.build_graph import build_graph
+    circular_id = os.path.splitext(file.filename)[0]
 
-        graph = build_graph()
-        graph.invoke({"file_path": file_path, "filename": file.filename})
+    try:
+        cleaned_text = clean_pdf(file_path)
     except Exception as exc:
+        # clean_pdf is still a stub awaiting the user's real implementation.
+        # Fail fast here, before build_graph() ever runs, so this doesn't pay
+        # the cost of opening a real Postgres checkpointer connection for a
+        # request that can't proceed anyway.
         raise HTTPException(
-            status_code=501, detail=f"Ingestion pipeline not wired up yet: {exc}"
+            status_code=501, detail=f"PDF cleaning not wired up yet: {exc}"
         ) from exc
 
-    return {"status": "success", "filename": file.filename}
+    clauses = split_into_clauses(cleaned_text)
+    if not clauses:
+        return {
+            "status": "success",
+            "filename": file.filename,
+            "circular_id": circular_id,
+            "clauses_processed": 0,
+            "results": [],
+        }
+
+    graph = build_graph()
+    results = []
+    matched_obligation_ids = set()
+
+    for i, clause_text in enumerate(clauses):
+        clause_id = f"clause-{i}"
+        state = {
+            "circular_id": circular_id,
+            "clause_id": clause_id,
+            "raw_clause": clause_text,
+            "heading": None,
+        }
+        config = {"configurable": {"thread_id": f"{circular_id}:{clause_id}"}}
+
+        try:
+            result = graph.invoke(state, config=config)
+        except Exception as exc:
+            results.append({"clause_id": clause_id, "status": "error", "detail": str(exc)})
+            continue
+
+        if "__interrupt__" in result:
+            # Paused for human review (amended/superseded clause). The old
+            # obligation this clause matches is still active and awaiting a
+            # decision — protect it from being wrongly marked superseded
+            # below just because its review hasn't been submitted yet.
+            interrupt_payload = result["__interrupt__"][0].value
+            similarity_match = interrupt_payload.get("similarity_match") or {}
+            obligation_id = (similarity_match.get("payload") or {}).get("obligation_id")
+            if obligation_id:
+                matched_obligation_ids.add(obligation_id)
+            results.append({"clause_id": clause_id, "status": "pending_review"})
+            continue
+
+        task = result.get("task")
+        if task:
+            matched_obligation_ids.add(task["obligation_id"])
+        results.append({
+            "clause_id": clause_id,
+            "status": "processed",
+            "diff_status": result.get("diff_status"),
+            "task": task,
+        })
+
+    # Only mark obligations superseded when every clause in this circular was
+    # actually processed — a clause that errored out doesn't tell us whether
+    # its obligation is still current, so treating a partial run as complete
+    # coverage would risk wrongly superseding obligations that just failed to
+    # re-match due to the error, not because they were genuinely dropped.
+    had_errors = any(r["status"] == "error" for r in results)
+    superseded = []
+    if not had_errors:
+        superseded = mark_superseded_obligations(db, circular_id, matched_obligation_ids)
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+        "circular_id": circular_id,
+        "clauses_processed": len(clauses),
+        "results": results,
+        "superseded_obligation_ids": superseded,
+        "supersession_skipped_due_to_errors": had_errors,
+    }
 
 
 @app.get("/gaps")
