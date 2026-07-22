@@ -27,7 +27,7 @@ export default function Hero({ onStart }) {
             From regulatory text to operational action.
           </h1>
           <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-violet-100/80">
-            Upload a SEBI circular. ComplyGuard reads it, extracts every
+            Upload a SEBI circular. RegOps AI reads it, extracts every
             obligation it imposes, and flags what's unmet — automatically and
             auditably.
           </p>

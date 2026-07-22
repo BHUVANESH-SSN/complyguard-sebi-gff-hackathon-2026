@@ -104,7 +104,7 @@ export default function App() {
       </div>
 
       <footer className="border-t border-neutral-100 py-8 text-center text-xs text-neutral-300">
-        ComplyGuard — Connects to Python FastAPI Backend.
+        RegOps AI — Connects to Python FastAPI Backend.
       </footer>
     </div>
   );

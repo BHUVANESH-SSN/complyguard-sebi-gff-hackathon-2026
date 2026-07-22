@@ -19,11 +19,11 @@ export default function Nav({ view, setView, unlocked }) {
               ◆
             </div>
             <span className="text-[15px] font-semibold tracking-tight text-neutral-900">
-              ComplyGuard
+              RegOps AI
             </span>
           </button>
           <div className="flex items-center gap-4 font-mono text-xs text-neutral-400">
-            <span>SEBI x ComplyGuard</span>
+            <span>SEBI x RegOps AI</span>
             <span className="rounded-full bg-violet-50 px-2.5 py-1 font-mono text-[11px] font-medium text-violet-700">
               PROTOTYPE
             </span>
