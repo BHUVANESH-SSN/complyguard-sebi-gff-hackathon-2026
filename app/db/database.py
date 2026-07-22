@@ -6,7 +6,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 Base = declarative_base()
 
-DEFAULT_DATABASE_URL = "postgresql://regops:regops@localhost:5432/regops"
+DEFAULT_DATABASE_URL = "postgresql://regops:regops@localhost:5433/regops"
 
 
 def make_engine(database_url: str | None = None):

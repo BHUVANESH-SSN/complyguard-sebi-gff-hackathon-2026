@@ -15,7 +15,7 @@ def _get_checkpointer():
     global _checkpointer
     if _checkpointer is None:
         conn_string = os.environ.get(
-            "DATABASE_URL", "postgresql://regops:regops@localhost:5432/regops"
+            "DATABASE_URL", "postgresql://regops:regops@localhost:5433/regops"
         )
         _checkpointer = _exit_stack.enter_context(
             PostgresSaver.from_conn_string(conn_string)

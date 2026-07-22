@@ -9,7 +9,10 @@ services:
       POSTGRES_PASSWORD: regops
       POSTGRES_DB: regops
     ports:
-      - "5432:5432"
+      # Host port 5433, not 5432: this machine already has an unrelated
+      # project's Postgres bound to 5432. Container-internal port stays
+      # 5432 (Postgres's own default), only the host-side mapping changes.
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
