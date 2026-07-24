@@ -23,7 +23,11 @@ export default function App() {
       const obs = await getObligations();
       const evs = await getEvidence();
       const logs = await getAuditLog();
-      
+
+      if (obs.length > 0) {
+        setUnlocked(ALL_VIEWS); // data already exists from a prior run — unlock on load, not just after upload
+      }
+
       setObligations(obs.map(o => ({
         id: o.id,
         circularName: o.circular_name,

@@ -3,7 +3,7 @@ import os
 import uuid
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct, VectorParams
 
 DEFAULT_COLLECTION = "circular_clauses"
 
@@ -54,3 +54,21 @@ def search(
         {"text": p.payload.get("text"), "score": p.score, "payload": p.payload}
         for p in response.points
     ]
+
+
+def find_by_obligation_id(
+    client: QdrantClient,
+    obligation_id: str,
+    collection_name: str = DEFAULT_COLLECTION,
+) -> dict | None:
+    """Look up the source clause a mapped obligation was extracted from, for traceability."""
+    points, _ = client.scroll(
+        collection_name=collection_name,
+        scroll_filter=Filter(
+            must=[FieldCondition(key="obligation_id", match=MatchValue(value=obligation_id))]
+        ),
+        limit=1,
+    )
+    if not points:
+        return None
+    return points[0].payload

@@ -8,17 +8,22 @@ from dotenv import load_dotenv
 load_dotenv()  # must run before importing app.db.database, which reads
                 # DATABASE_URL at import time
 
+import uuid
+
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.routes_review import router as review_router
 from app.db.database import Base, engine, get_db
 import app.db.models  # noqa: F401 — registers all tables on Base.metadata before create_all
+from app.db.models import AuditTrail, EvidenceLog, Obligation, Task
+from app.embeddings.qdrant_client import find_by_obligation_id, get_client
 from app.graph.build_graph import build_graph
 from app.ingestion.clause_splitter import split_into_clauses
 from app.ingestion.pdf_cleaner import extract_and_clean
-from app.services.gap_engine import get_gaps
+from app.services.gap_engine import get_gaps, update_all_task_statuses
 from app.services.supersession import mark_superseded_obligations
 
 
@@ -111,6 +116,14 @@ async def upload_circular(file: UploadFile = File(...), db: Session = Depends(ge
         task = result.get("task")
         if task:
             matched_obligation_ids.add(task["obligation_id"])
+        elif result.get("diff_status") == "unchanged":
+            # mapper_node deliberately no-ops on unchanged clauses (nothing to
+            # update), but the obligation it matched is still current — count
+            # it as matched so it isn't wrongly marked superseded below.
+            similarity_match = result.get("similarity_match") or {}
+            obligation_id = (similarity_match.get("payload") or {}).get("obligation_id")
+            if obligation_id:
+                matched_obligation_ids.add(obligation_id)
         results.append({
             "clause_id": clause_id,
             "status": "processed",
@@ -146,3 +159,83 @@ def list_gaps(db: Session = Depends(get_db)):
     except Exception as exc:
         # Same note as above — narrow once app.db.models is real.
         raise HTTPException(status_code=501, detail=str(exc)) from exc
+
+
+@app.get("/obligations")
+def list_obligations(db: Session = Depends(get_db)):
+    update_all_task_statuses(db)
+    client = get_client()
+
+    obligations = []
+    for ob in db.query(Obligation).filter(Obligation.status == "active").all():
+        task = db.query(Task).filter(Task.obligation_id == ob.id).first()
+        source = find_by_obligation_id(client, ob.id)
+        obligations.append({
+            "id": ob.id,
+            "circular_name": (source or {}).get("circular_id"),
+            "obligation_text": ob.requirement,
+            "intermediary": None,
+            "deadline": task.due_date.date().isoformat() if task and task.due_date else None,
+            "evidence_type": ob.evidence_type,
+            "source_chunk": (source or {}).get("text"),
+            "status": task.status if task else "pending",
+        })
+    return obligations
+
+
+@app.get("/evidence")
+def list_evidence(db: Session = Depends(get_db)):
+    results = []
+    for e in db.query(EvidenceLog).all():
+        task = db.query(Task).filter(Task.id == e.task_id).one_or_none()
+        results.append({
+            "id": e.id,
+            "obligation_id": task.obligation_id if task else None,
+            "description": e.file_ref,
+            "submitted_at": e.submitted_at.isoformat() if e.submitted_at else None,
+        })
+    return results
+
+
+class EvidenceIn(BaseModel):
+    obligation_id: str
+    description: str
+
+
+@app.post("/evidence")
+def create_evidence(payload: EvidenceIn, db: Session = Depends(get_db)):
+    task = db.query(Task).filter(Task.obligation_id == payload.obligation_id).first()
+    if not task:
+        raise HTTPException(
+            status_code=404, detail=f"No task found for obligation '{payload.obligation_id}'"
+        )
+    entry = EvidenceLog(id=str(uuid.uuid4()), task_id=task.id, file_ref=payload.description)
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return {
+        "id": entry.id,
+        "obligation_id": task.obligation_id,
+        "description": entry.file_ref,
+        "submitted_at": entry.submitted_at.isoformat(),
+    }
+
+
+_AUDIT_ACTION_LABELS = {
+    "finalize": "Obligations extracted",
+    "human_review": "Human review decision",
+}
+
+
+@app.get("/audit_log")
+def list_audit_log(db: Session = Depends(get_db)):
+    results = []
+    for r in db.query(AuditTrail).order_by(AuditTrail.timestamp.desc()).all():
+        detail = ", ".join(f"{k}={v}" for k, v in (r.action or {}).items())
+        results.append({
+            "id": r.id,
+            "action": _AUDIT_ACTION_LABELS.get(r.node_name, r.node_name),
+            "detail": detail,
+            "timestamp": r.timestamp.isoformat() if r.timestamp else None,
+        })
+    return results
